@@ -6,8 +6,8 @@ pacman::p_load(scales,lubridate,RCurl, sf, hrbrthemes, lwgeom, rgdal, broom, wes
 ## My preferred ggplot2 plotting theme (optional)
 theme_set(hrbrthemes::theme_ipsum())
 
-#First, I am going to read the isc3 excess deaths data for regions
-data_excess_deaths <-read_excel("C:\\Users\\Usuario\\Desktop\\covid_momo\\datos_excel.xlsx")
+#First, I am going to read the isc3 excess deaths data for regions from the web
+data_excess_deaths <- read.csv("https://momo.isciii.es/public/momo/data")
 
 #Second, I am going to read the data provided by montera34
 
