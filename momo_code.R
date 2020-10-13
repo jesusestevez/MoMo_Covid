@@ -1,7 +1,7 @@
 # https://www.njtierney.com/post/2020/10/11/times-scales-covid/
 
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(lubridate,RCurl, sf, hrbrthemes, lwgeom, rgdal, broom, wesanderson, rnaturalearth, maps, mapdata, spData, tigris, tidycensus, leaflet, tmap, tmaptools, tidyverse, rvest, polite, readr, knitr, readxl)
+pacman::p_load(scales,lubridate,RCurl, sf, hrbrthemes, lwgeom, rgdal, broom, wesanderson, rnaturalearth, maps, mapdata, spData, tigris, tidycensus, leaflet, tmap, tmaptools, tidyverse, rvest, polite, readr, knitr, readxl)
 
 ## My preferred ggplot2 plotting theme (optional)
 theme_set(hrbrthemes::theme_ipsum())
@@ -109,6 +109,15 @@ data_excess_deaths_nospain %>%
 #now, to plot the line instead of points:
 regional_plot_nospain<-regional_plot[regional_plot$region != 18 & regional_plot$region != 19& regional_plot$region != 0,]
 
+
+#vamos a guardar las nuevas bases de datos.
+
+#save the dataframe that includes the map of spain:
+save(regional_df2, file='regional_df2.RData')
+
+#I do not want to save the data about the excess deaths nor the ccaa, since they have to be updated.
+
+
 regional_plot_nospain %>%
   ggplot(aes(x=date, y=defunciones_observadas, col=fct_reorder2(ccaa,date,defunciones_observadas))) + 
   geom_line() +
@@ -119,8 +128,53 @@ regional_plot_nospain %>%
   ) +
   theme(legend.title = element_blank()) ## Switch off legend title
 
+#now, to make it better, I will erase from january backwards in regional_plot_nospain
 
+#intensive_care_per_1000000 en España
+bp <- 
+  ggplot(regional_plot_nospain,aes(x=date, y=intensive_care_per_1000000, col=fct_reorder2(ccaa,date,PCR))) + 
+  geom_line(size=1) + scale_x_date(limits = as.Date(c("2020-01-01","2020-10-13"))) + 
+  labs(
+    title = "intensive_care_per_1000000",
+    x = "Date", y = "intensive_care_per_1000000",
+    caption = "Source: Myself"
+  ) +
+  theme(legend.title = element_blank()) ## Switch off legend title
 
+bp
+
+#split it by region
+
+bp + facet_wrap(vars(ccaa))
+
+#defunciones_observadas en España
+#voy a modificarlo para ver solo España
+regional_plot_spain<-regional_plot[regional_plot$region < 1,]
+#y ahora quiero solo cada 7 dias los datos, no solo limitar el eje x, por lo que
+#•genero un vector y luego lo meto
+
+vector <- seq(1,8988,6)
+
+regional_plot_spain <- regional_plot_spain[-c(vector),]
+
+#Y ahora solo para males
+regional_plot_spain_males<-regional_plot_spain[regional_plot_spain$cod_sexo != 6 & regional_plot_spain$cod_sexo != 'all',]
+
+bp <- 
+  ggplot(regional_plot_spain_males,aes(x=date, y=defunciones_observadas, col=fct_reorder2(cod_gedad,date,PCR))) + 
+  geom_line(size=1) + scale_x_date(limits = as.Date(c("2020-01-01","2020-10-13")), breaks = "1 week") + 
+  labs(
+    title = "defunciones_observadas",
+    x = "Date", y = "defunciones_observadas",
+    caption = "Source: Myself"
+  ) +
+  theme(legend.title = element_blank(),axis.text.x=element_text(angle=90, hjust=1)) ## Switch off legend title
+
+bp
+
+#split it by region
+
+bp + facet_wrap(vars(ccaa))
 
 
 
