@@ -147,6 +147,10 @@ bp
 
 bp + facet_wrap(vars(ccaa))
 
+
+
+
+
 #defunciones_observadas en España
 #voy a modificarlo para ver solo España
 regional_plot_spain<-regional_plot[regional_plot$region < 1,]
@@ -161,7 +165,7 @@ regional_plot_spain <- regional_plot_spain[-c(vector),]
 regional_plot_spain_males<-regional_plot_spain[regional_plot_spain$cod_sexo != 6 & regional_plot_spain$cod_sexo != 'all',]
 
 bp <- 
-  ggplot(regional_plot_spain_males,aes(x=date, y=defunciones_observadas, col=fct_reorder2(cod_gedad,date,PCR))) + 
+  ggplot(regional_plot_spain_males,aes(x=date, y=defunciones_observadas, col=fct_reorder2(cod_gedad,date,defunciones_observadas))) + 
   geom_line(size=1) + scale_x_date(limits = as.Date(c("2020-01-01","2020-10-13")), breaks = "1 week") + 
   labs(
     title = "defunciones_observadas",
@@ -172,9 +176,38 @@ bp <-
 
 bp
 
-#split it by region
 
-bp + facet_wrap(vars(ccaa))
+#Now, I want to stablish a set of conditions to the plot, in such a way that I want to plot a sibset
+
+bp %+% subset(regional_plot_spain_males, cod_gedad %in% c('mas_74', 'all'))
+
+bp %+%  geom_line(data=regional_plot_spain_males, aes(x=date, y=defunciones_esperadas, col=fct_reorder2(cod_gedad,date,defunciones_observadas)), size=1.4, alpha=0.7)
+%+% subset(regional_plot_spain_males, cod_gedad %in% c('mas_74', 'all')) 
+
+
+
+
+#ahora lo mismo pero con madrid (proximamente)
+
+bp %+%  geom_line(data=regional_plot_spain_males, aes(x=date, y=defunciones_esperadas, col=fct_reorder2(cod_gedad,date,defunciones_observadas)), size=1.4, alpha=0.7)
+%+% subset(regional_plot_spain_males, cod_gedad %in% c('mas_74', 'all')) %+%
+  geom_line(data=regional_plot_spain_males, aes(x=date, y=intensive_care_per_100000, col=fct_reorder2(cod_gedad,date,defunciones_observadas)), size=1.4, alpha=0.7)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
