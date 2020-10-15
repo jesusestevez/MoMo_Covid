@@ -1,7 +1,7 @@
 # https://www.njtierney.com/post/2020/10/11/times-scales-covid/
 
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(scales,lubridate,RCurl, sf, hrbrthemes, lwgeom, rgdal, broom, wesanderson, rnaturalearth, maps, mapdata, spData, tigris, tidycensus, leaflet, tmap, tmaptools, tidyverse, rvest, polite, readr, knitr, readxl)
+pacman::p_load(hrbrthemes,viridis, scales,lubridate,RCurl, sf, hrbrthemes, lwgeom, rgdal, broom, wesanderson, rnaturalearth, maps, mapdata, spData, tigris, tidycensus, leaflet, tmap, tmaptools, tidyverse, rvest, polite, readr, knitr, readxl)
 
 ## My preferred ggplot2 plotting theme (optional)
 theme_set(hrbrthemes::theme_ipsum())
@@ -157,9 +157,14 @@ regional_plot_spain<-regional_plot[regional_plot$region < 1,]
 #y ahora quiero solo cada 7 dias los datos, no solo limitar el eje x, por lo que
 #•genero un vector y luego lo meto
 
-vector <- seq(1,8988,6)
+a <- seq(1,8988,6)
+b <- 2:8987
+vector <- setdiff(b,a) # esto es lo que quiero eliminar para que sean datos semanales
 
-regional_plot_spain <- regional_plot_spain[-c(vector),]
+regional_plot_spain_limitted <- regional_plot_spain[-c(vector),]
+# con esto he roto las fechas por semanas empezando cada martes, pero como queda muy basic, mejor lo dejo con todas las fechas
+# y solo rompo el eje x por claridad
+regional_plot_spain <- regional_plot_spain[-c(a),]
 
 #Y ahora solo para males
 regional_plot_spain_males<-regional_plot_spain[regional_plot_spain$cod_sexo != 6 & regional_plot_spain$cod_sexo != 'all',]
@@ -177,14 +182,67 @@ bp <-
 bp
 
 
-#Now, I want to stablish a set of conditions to the plot, in such a way that I want to plot a sibset
-
-bp %+% subset(regional_plot_spain_males, cod_gedad %in% c('mas_74', 'all'))
-
-bp %+%  geom_line(data=regional_plot_spain_males, aes(x=date, y=defunciones_esperadas, col=fct_reorder2(cod_gedad,date,defunciones_observadas)), size=1.4, alpha=0.7)
-%+% subset(regional_plot_spain_males, cod_gedad %in% c('mas_74', 'all')) 
+#Now, I want to stablish a set of conditions to the plot, in such a way that I want to plot a subset
+# This can also be done with the filter function creating a new database only with some agegroups 
+# see https://www.r-graph-gallery.com/line-chart-several-groups-ggplot2.html
 
 
+only_olds<-bp %+% subset(regional_plot_spain_males, cod_gedad %in% c('mas_74', 'all'))
+
+all_defun_esperadas <-   ggplot(subset(regional_plot_spain_males, cod_gedad %in% c('mas_74', 'all')),aes(x=date, y=defunciones_observadas, col=fct_reorder2(cod_gedad,date,defunciones_observadas))) + 
+  geom_line(size=1) + scale_x_date(limits = as.Date(c("2020-01-01","2020-10-13")), breaks = "1 week") + 
+  geom_line( aes(x=date, y=defunciones_esperadas, col=fct_reorder2(cod_gedad,date,defunciones_observadas)), size=1.4, alpha=0.7, linetype = "dashed") +
+  labs(
+    title = "defunciones_observadas",
+    x = "Date", y = "defunciones_observadas",
+    caption = "Source: Instituto de Salud Carlos III, montera34 y recopilación propia."
+  ) +
+  theme(legend.title = element_blank(),axis.text.x=element_text(angle=90, hjust=1)) ## Switch off legend title+
+
+all_defun_esperadas
+ 
+#THE GUIDE TO PLOT 
+
+# https://www.r-graph-gallery.com/line-chart-several-groups-ggplot2.html
+
+# To be able to write the proper legend, I am going to replicate the nombre_gedad column with different name 
+
+regional_plot_spain_males$nombresdos = regional_plot_spain_males$nombre_gedad
+
+#And now I add it the suffix esperadas
+
+regional_plot_spain_males$nombresdos = paste("esperadas",regional_plot_spain_males$nombresdos,sep = " ")
+
+LegendTitle = "Legend"
+linetype = rep(c('solid', 'dashed'),2)
+# I CANNOT CHANGE THE LEGEND TO DASHED WITH WIDE FORMAT, I NEED LONG. 
+all_defun_esperadas_versiondos <-   ggplot(subset(regional_plot_spain_males, nombre_gedad %in% c('edad > 75', 'todos')),aes(x=date, y=defunciones_observadas)) + 
+  geom_line(aes(group = nombre_gedad , col = nombre_gedad ), size=1) + scale_x_date(limits = as.Date(c("2020-01-01","2020-10-13")), breaks = "1 week") + 
+  geom_line( aes(x=date, y=defunciones_esperadas,group = nombresdos,col = nombresdos), size=1.4, alpha=0.7, linetype='dashed') +
+  labs(
+    title = "Defunciones ",
+    x = "Date", y = "Defunciones",
+    caption = "Source: Instituto de Salud Carlos III, montera34 y recopilación propia."
+  ) +
+  scale_color_manual(values = c("#D55E00", "#D55E00", "#56B4E9", "#56B4E9")) +
+  scale_linetype_manual(name=LegendTitle,, values = linetype)  +
+  theme(legend.position = c(.20, .65),axis.text.x=element_text(angle=90, hjust=1)) 
+
+all_defun_esperadas_versiondos
+
+  
+  
+  
+  
+  
+  
+only_olds %+%  geom_line(data=regional_plot_spain_males, aes(x=date, y=defunciones_esperadas, col=fct_reorder2(cod_gedad,date,defunciones_observadas)), size=1.4, alpha=0.7, linetype = "dashed") 
+
+all_defun_esperadas %+% subset(regional_plot_spain_males, cod_gedad %in% c('mas_74', 'all'))
+
+
+all_defun_esperadas_mas74 <- all_defun_esperadas %+% subset(regional_plot_spain_males, cod_gedad %in% c('mas_74', 'all')) 
+all_defun_esperadas_mas74
 
 
 #ahora lo mismo pero con madrid (proximamente)
