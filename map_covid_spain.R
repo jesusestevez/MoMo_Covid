@@ -56,68 +56,100 @@ regional_plot <- regional_df2%>%
   left_join(single_day, by = "region")
 
 regional_plot%>%ggplot(aes(x=long, y = lat, group = group))+
-  #ri_disp is the income variable
-  geom_polygon(aes(fill = PCR), color = "white")+
+  geom_polygon(aes(fill = daily_cases_PCR_avg7), color = "white")+
   theme_minimal()
+#
+#
+# The Theme:
 
-
-
-
-
-quantile(regional_plot$PCR, probs = c(0.2, 0.4, 0.6, 0.8), na.rm = TRUE)
-
-corte <- c(96 , 120, 200, 266)
-
-val_min <- min(regional_plot$PCR)
-val_max <- max(regional_plot$PCR)
-breaks <- c(val_min, corte, val_max)
-regional_plot$breaks <- cut(regional_plot$PCR,
-                                      breaks = breaks,
-                                      include.lowest = T)
-
-breaks_scale <- levels(regional_plot$breaks)
-labels_scale <- rev(breaks_scale)
-
-
-
-colores <- wes_palette("Moonrise3", 5, type = "discrete")
-
-segovia <- subset(regional_plot, region==39)
-
-
-segovia %>%
-  ggplot(aes(x=long, y= lat, group = group)) +
-  geom_polygon(aes(fill=breaks), color= "white", size = 0.2) +
-  labs( title = "Tasa Bruta de Mortalidad por Provincia",
-        subtitle = "Defunciones por mil habitantes",
-        caption = "Fuente: INE",
-        fill = "") +
+theme_ari_maps <- function(...) {
   theme_minimal() +
-  theme(
-    axis.line = element_blank(),
-    axis.text = element_blank(),
-    axis.title = element_blank(),
-    axis.ticks = element_blank(),
-    plot.background = element_rect(fill = "snow", color = NA),
-    panel.background = element_rect(fill= "snow", color = NA),
-    plot.title = element_text(size = 16, hjust = 0),
-    plot.subtitle = element_text(size = 12, hjust = 0),
-    plot.caption = element_text(size = 8, hjust = 1),
-    legend.title = element_text(color = "grey40", size = 8),
-    legend.text = element_text(color = "grey40", size = 7, hjust = 0),
-    legend.position = c(0.93, 0.3),
-    plot.margin = unit(c(0.5,2,0.5,1), "cm")) +
+    theme(
+      axis.line = element_blank(),
+      axis.text.x = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks = element_blank(),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      panel.grid.major = element_line(color = "#ebebe5", size = 0.2),
+      panel.grid.minor = element_blank(),
+      plot.background = element_rect(fill = "ivory1", color = NA),
+      panel.background = element_rect(fill = "ivory1", color = NA),
+      legend.background = element_rect(fill = "ivory1", color = NA),
+      panel.border = element_blank(),
+      plot.title = element_text(size = 11, hjust = 0.5, face = "bold"),
+      plot.subtitle = element_text(size = 9, hjust = 0.5, color = "grey40"),
+      plot.caption = element_text(size = 7.5, color = "grey40"),
+      legend.title = element_text(color = "grey40", size = 8),
+      legend.text = element_text(color = "grey40", size = 7, hjust = 0),
+      legend.position = c(0.7, 0.07),
+      legend.text.align = 0,
+      plot.margin = unit(c(.5,.5,.2,.5), "cm"),
+      panel.spacing = unit(c(2,0.2,.2,0.2), "cm"))
+}
+
+# The Colors:
+
+pal <- wes_palette("Zissou1", 5, type = "discrete")
+
+#Getting the quantiles:
+quantile(regional_plot$daily_cases_PCR_avg7, probs = c(.2,.4,.6,.8), na.rm = TRUE)
+#This returns  57.7  97.0 130.7 203.4 
+
+#I'm going to slightly change the breaks to make them prettier
+#again, this fully depends on your preferences
+pretty_breaks <- c( 60 , 100, 150, 200 )
+
+# Getting the minimum and maximum value to surround the breaks
+minVal <- min(regional_plot$daily_cases_PCR_avg7, na.rm = T)
+maxVal <- max(regional_plot$daily_cases_PCR_avg7, na.rm = T)
+
+#Putting them together:
+brks <- c(minVal, pretty_breaks, maxVal)
+
+# Creating labels
+labels <- c()
+# round the extremes
+for(idx in 1:length(brks)){
+  labels <- c(labels,round(brks[idx + 1], 2))
+}
+
+labels <- labels[1:length(labels)-1]
+
+regional_plot$brks <- cut(regional_plot$daily_cases_PCR_avg7, 
+                           breaks = brks, 
+                           include.lowest = TRUE, 
+                           labels = labels)
+
+brks_scale <- levels(regional_plot$brks)
+labels_scale <- rev(brks_scale)
+
+
+
+regional_plot%>%
+  #you should be using the following aesthetics for any plot you make:
+  ggplot(aes(x=long, y = lat, group = group))+
+  #we use brks for the fill and resuce the size of the borders
+  geom_polygon(aes(fill=brks), color = "white", size = 0.3)+
+  #Adding the color palette 
+  #AND setting how I want the scale to look like
   scale_fill_manual(
-    values = rev(colores),
-    breaks = rev(breaks_scale))
-
-
-
-
-
-
-
-
-
-
-
+    values = rev(pal), #I use rev so that red is for lowest values 
+    breaks = rev(brks_scale),
+    name = "Daily Cases",
+    drop = FALSE,
+    labels = labels_scale,
+    guide = guide_legend(direction = "horizontal",
+                         keyheight = unit(2, units = "mm"),
+                         keywidth = unit(50 / length(labels), units = "mm"),
+                         title.position = 'top',
+                         title.hjust = 0.5,
+                         label.hjust = 1,
+                         nrow = 1,
+                         byrow = T,
+                         reverse = T,
+                         label.position = "bottom"))+
+  labs(title="Covid in Spain: Daily cases PCR 7 DAYS AVG",
+    
+       caption = "Jesus Estevez-Sanchez - Data: escovid19data")+
+  theme_ari_maps()
